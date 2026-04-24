@@ -1,25 +1,15 @@
-// src/components/LarekApi.ts
-import { IApi, IProductResponse, IOrder, IOrderResult } from "../types";
+import { Api } from "./base/Api";
+import { IProductResponse, IOrder, IOrderResult } from "../types";
 
 export class LarekApi {
-  private _api: IApi;
-  readonly cdn: string;
+  private _api: Api;
 
-  constructor(api: IApi, cdn: string) {
-    // <--- ПОРЯДОК: сначала API, потом CDN
+  constructor(api: Api) {
     this._api = api;
-    this.cdn = cdn;
   }
 
   getProducts(): Promise<IProductResponse> {
-    // Убедись, что здесь '/product', а не 'product' или '/product/'
-    return this._api.get<IProductResponse>("/product").then((data) => ({
-      ...data,
-      items: data.items.map((item) => ({
-        ...item,
-        image: this.cdn + item.image,
-      })),
-    }));
+    return this._api.get<IProductResponse>("/product");
   }
 
   orderProducts(order: IOrder): Promise<IOrderResult> {

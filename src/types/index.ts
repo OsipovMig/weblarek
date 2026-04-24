@@ -24,7 +24,7 @@ export type TPayment = "card" | "cash";
 
 // Интерфейс для данных покупателя
 export interface IBuyer {
-  payment: TPayment;
+  payment: TPayment | null;
   email: string;
   phone: string;
   address: string;

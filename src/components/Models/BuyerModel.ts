@@ -2,12 +2,11 @@ import { IBuyer, FormErrors, TPayment } from "../../types";
 
 export class BuyerModel {
   protected _data: IBuyer = {
-    payment: "card",
+    payment: null,
     address: "",
     email: "",
     phone: "",
   };
-  protected _errors: FormErrors = {};
 
   constructor() {}
 
@@ -24,19 +23,19 @@ export class BuyerModel {
   }
 
   clearData(): void {
-    this._data = { payment: "card", address: "", email: "", phone: "" };
-    this._errors = {};
+    // Сбрасываем всё, включая оплату
+    this._data = { payment: null, address: "", email: "", phone: "" };
   }
 
   validate(): FormErrors {
     const errors: FormErrors = {};
 
-    if (!this._data.address) errors.address = "Необходимо указать адрес";
-    if (!this._data.email) errors.email = "Необходимо указать email";
-    if (!this._data.phone) errors.phone = "Необходимо указать телефон";
-    if (!this._data.payment) errors.payment = "Не выбран способ оплаты";
+    if (!this._data.address.trim()) errors.address = "Необходимо указать адрес";
+    if (!this._data.email.trim()) errors.email = "Необходимо указать email";
+    if (!this._data.phone.trim()) errors.phone = "Необходимо указать телефон";
+    if (!this._data.payment)
+      errors.payment = "Необходимо выбрать способ оплаты";
 
-    this._errors = errors;
     return errors;
   }
 }

@@ -1,10 +1,11 @@
-import { API_URL, CDN_URL } from "./utils/constants"; // Импортируем константы
+import { API_URL, CDN_URL } from "./utils/constants";
+import { apiProducts } from "./utils/data"; // Импортируем локальные данные для тестов
 import "./scss/styles.scss";
 import { CatalogModel } from "./components/Models/CatalogModel";
 import { BasketModel } from "./components/Models/BasketModel";
 import { BuyerModel } from "./components/Models/BuyerModel";
-import { Api } from "./components/base/Api"; // Базовый класс
-import { LarekApi } from "./components/LarekApi"; // Твой новый класс
+import { Api } from "./components/base/Api";
+import { LarekApi } from "./components/LarekApi";
 
 // Инициализация моделей
 const catalog = new CatalogModel();
@@ -12,60 +13,57 @@ const basket = new BasketModel();
 const buyer = new BuyerModel();
 
 // Инициализация API
-const baseApi = new Api(API_URL);
+const baseApi = new Api(API_URL || "https://nomoreparties.co");
+const larekApi = new LarekApi(baseApi);
 
-// 2. Создаем наш LarekApi
-// ВАЖНО: передаем ОБЪЕКТ baseApi первым, а СТРОКУ CDN_URL вторым
-// (согласно конструктору выше)
-const larekApi = new LarekApi(baseApi, CDN_URL);
+console.log("РЕАЛЬНЫЙ АДРЕС API:", API_URL);
 
-// 3. Вызываем метод
-larekApi
-  .getProducts()
-  .then((res) => {
-    catalog.setItems(res.items);
-    console.log("Товары с сервера:", catalog.getItems());
-  })
-  .catch(console.error);
+// --- 1. ТЕСТИРОВАНИЕ МОДЕЛЕЙ (на локальных данных) ---
+console.group("Тестирование моделей данных (локально)");
+
+// Тест каталога
+catalog.setItems(apiProducts.items);
+console.log("Товары загружены в каталог:", catalog.getItems());
+console.log("Поиск товара по ID:", catalog.getItem(apiProducts.items[0].id));
+
+// Тест корзины
+basket.clear();
+basket.add(apiProducts.items[0]);
+console.log("Корзина (после добавления 1 товара):", basket.getCount());
+console.log("Общая стоимость:", basket.getTotalPrice());
+
+// Тест покупателя
+buyer.setData("address", "Набережная, 10");
+const validationErrors = buyer.validate();
+console.log("Данные покупателя:", buyer.getData());
 console.log(
-  "%c ЗАПРОС ДАННЫХ С СЕРВЕРА ",
-  "background: #222; color: #bada55; font-size: 1.2em;",
+  "Ошибки валидации (ожидаем payment, email, phone):",
+  validationErrors,
 );
 
-// Получаем реальные данные с сервера
+console.groupEnd();
+
+// --- 2. РАБОТА С СЕРВЕРОМ ---
 larekApi
   .getProducts()
   .then((res) => {
-    // 1. Сохраняем полученный массив товаров в модель каталога
-    catalog.setItems(res.items);
+    // Модифицируем данные: добавляем CDN_URL к картинкам (теперь это делается здесь)
+    const itemsWithImages = res.items.map((item) => ({
+      ...item,
+      image: CDN_URL + item.image,
+    }));
 
-    // 2. Проверяем результат в консоли
+    catalog.setItems(itemsWithImages);
+
     console.group("Проверка данных с сервера");
     const products = catalog.getItems();
-    console.log("Товары, успешно сохраненные в CatalogModel:", products);
+    console.log("Товары в CatalogModel (с сервера):", products);
 
     if (products.length > 0) {
-      console.log(
-        "Первый товар из каталога (с полным путем картинки):",
-        products[0],
-      );
+      console.log("Пример товара с полным путём картинки:", products[0]);
     }
     console.groupEnd();
   })
   .catch((err) => {
     console.error("Ошибка при получении данных с сервера:", err);
   });
-
-// Твои тесты моделей (можно оставить для проверки логики работы с корзиной и покупателем)
-console.log(
-  "%c ПРОВЕРКА ЛОГИКИ МОДЕЛЕЙ ",
-  "background: #222; color: #3498db; font-size: 1.2em;",
-);
-
-// Проверка BasketModel (на пустых данных пока)
-basket.clear();
-console.log("Корзина очищена, количество:", basket.getCount());
-
-// Проверка BuyerModel
-buyer.setData("address", "Набережная, 10");
-console.log("Валидация покупателя (ожидаем ошибки):", buyer.validate());
