@@ -62,19 +62,25 @@ const successTemplate = document.querySelector(
 ) as HTMLTemplateElement;
 
 // Инициализация компонентов представления для модальных окон
-// Безопасно извлекаем первый дочерний элемент из шаблонов форм и корзины
+// Используем .firstElementChild, чтобы достать чистый HTML-элемент формы/корзины из шаблона
 const basketView = new Basket(
-  basketTemplate.content.cloneNode(true) as HTMLElement,
+  (basketTemplate.content.cloneNode(true) as HTMLElement)
+    .firstElementChild as HTMLElement,
   events,
 );
+
 const orderFormView = new OrderForm(
-  orderTemplate.content.cloneNode(true) as HTMLFormElement,
+  (orderTemplate.content.cloneNode(true) as HTMLElement)
+    .firstElementChild as HTMLFormElement,
   events,
 );
+
 const contactsFormView = new ContactsForm(
-  contactsTemplate.content.cloneNode(true) as HTMLFormElement,
+  (contactsTemplate.content.cloneNode(true) as HTMLElement)
+    .firstElementChild as HTMLFormElement,
   events,
 );
+
 // ==========================================
 // 3. ОБРАБОТКА СОБЫТИЙ ПРЕЗЕНТЕРОМ
 // ==========================================
