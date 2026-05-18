@@ -16,7 +16,7 @@ import { Page } from "./components/view/page";
 import { Modal } from "./components/view/Modal";
 import { Basket } from "./components/view/Basket";
 import { CardCatalog, CardPreview, CardBasket } from "./components/view/card";
-import { OrderForm, ContactsForm } from "./components/view/Form.ts";
+import { OrderForm, ContactsForm } from "./components/view/Form";
 import { Success } from "./components/view/Success";
 
 // Импорт типов данных
@@ -62,6 +62,7 @@ const successTemplate = document.querySelector(
 ) as HTMLTemplateElement;
 
 // Инициализация компонентов представления для модальных окон
+// Безопасно извлекаем первый дочерний элемент из шаблонов форм и корзины
 const basketView = new Basket(
   basketTemplate.content.cloneNode(true) as HTMLElement,
   events,
@@ -74,79 +75,65 @@ const contactsFormView = new ContactsForm(
   contactsTemplate.content.cloneNode(true) as HTMLFormElement,
   events,
 );
-
 // ==========================================
 // 3. ОБРАБОТКА СОБЫТИЙ ПРЕЗЕНТЕРОМ
 // ==========================================
-
-/**
- * ВАЖНОЕ ПРАВИЛО ТЗ: Презентер обрабатывает события, а не генерирует их.
- * В коде ниже полностью отсутствуют вызовы events.emit() и events.trigger().
- */
 
 // --- 3.1. СОБЫТИЯ МОДЕЛЕЙ ДАННЫХ (Вызывают ререндер Представлений) ---
 
 // [Модель] Изменение каталога товаров -> Рендерим карточки на Главной странице
 events.on("items:changed", () => {
-  // Получаем актуальный массив товаров из модели
   const cardElements = catalogModel.getItems().map((item) => {
-    const cardContainer = cardCatalogTemplate.content.cloneNode(
+    const cardClone = cardCatalogTemplate.content.cloneNode(
       true,
     ) as HTMLElement;
+    const cardElement = cardClone.firstElementChild as HTMLElement; // Извлекаем саму HTML-кнопку .card
 
-    // Создаем представление карточки для каталога
-    const card = new CardCatalog(cardContainer, {
-      // Передаем обработчик, полученный в конструкторе карточки
+    const card = new CardCatalog(cardElement, {
       onClick: () => {
-        // Передаем действие пользователя в Презентер через событие Представления
         events.emit("card:select", { id: item.id });
       },
     });
     return card.render(item);
   });
 
-  // Передаем собранный массив разметок в рендер компонента главной страницы
   page.catalog = cardElements;
 });
 
 // [Модель] Изменение выбранного для просмотра товара -> Открываем карточку превью
 events.on<{ item: IProduct | null }>("preview:changed", (data) => {
   if (data.item) {
-    const previewContainer = cardPreviewTemplate.content.cloneNode(
+    const previewClone = cardPreviewTemplate.content.cloneNode(
       true,
     ) as HTMLElement;
-    const cardPreview = new CardPreview(previewContainer, {
+    const previewElement = previewClone.firstElementChild as HTMLElement; // Извлекаем HTML-элемент карточки превью
+
+    const cardPreview = new CardPreview(previewElement, {
       onClick: () => {
-        // Обработчик кнопки покупки товара транслирует действие Представления в Презентер
         events.emit("card:toBasket", { id: data.item!.id });
       },
     });
 
-    // Проверяем статус товара в корзине и рендерим превью карточки
     const isAdded = basketModel.isInBasket(data.item.id);
     modal.content = cardPreview.render({
       ...data.item,
       buttonText: isAdded ? "Удалить из корзины" : "В корзину",
     });
 
-    // Ререндер в результате обработки события открытия модального окна
     modal.open();
   }
 });
 
 // [Модель] Изменение содержимого корзины -> Обновляем счетчик на странице и разметку списка
 events.on("basket:changed", () => {
-  // 1. Обновляем счетчик на главной странице
   page.counter = basketModel.getCount();
 
-  // 2. Формируем массив разметок компактных карточек для списка в корзине
   const basketItems = basketModel.getItems().map((item, index) => {
-    const rowContainer = cardBasketTemplate.content.cloneNode(
-      true,
-    ) as HTMLElement;
-    const row = new CardBasket(rowContainer, {
+    const rowClone = cardBasketTemplate.content.cloneNode(true) as HTMLElement;
+    const rowElement = rowClone.firstElementChild as HTMLElement; // Извлекаем HTML-элемент строки корзины
+
+    const row = new CardBasket(rowElement, {
       onDelete: () => {
-        // Нажатие кнопки удаления товара из корзины
         events.emit("card:delete", { id: item.id });
       },
     });
@@ -157,7 +144,6 @@ events.on("basket:changed", () => {
     });
   });
 
-  // Передаем данные в рендер компонента корзины
   basketView.items = basketItems;
   basketView.total = basketModel.getTotalPrice();
 });
@@ -180,12 +166,11 @@ events.on<FormErrors>("contactsForm:validate", (errors) => {
 events.on<{ id: string }>("card:select", (data) => {
   const item = catalogModel.getItem(data.id);
   if (item) {
-    // Изменяем данные в модели (это само вызовет событие preview:changed и ререндер)
     catalogModel.setPreview(item);
   }
 });
 
-// [Представление] Нажатие кнопки покупки товара (Добавить / Удалить в превью)
+// [Представление] Нажатие кнопки покупки товара
 events.on<{ id: string }>("card:toBasket", (data) => {
   const item = catalogModel.getItem(data.id);
   if (item) {
@@ -194,12 +179,10 @@ events.on<{ id: string }>("card:toBasket", (data) => {
     } else {
       basketModel.add(item);
     }
-    // После изменения данных перерисовываем только кнопку превью, так как модель корзины
-    // сама обновит глобальный счетчик, но про превью карточку она ничего не знает
     const isAdded = basketModel.isInBasket(item.id);
-    modal.content.querySelector(".card__button")!.textContent = isAdded
-      ? "Удалить из корзины"
-      : "В корзину";
+    const cardBtn = modal.content.querySelector(".card__button");
+    if (cardBtn)
+      cardBtn.textContent = isAdded ? "Удалить из корзины" : "В корзину";
   }
 });
 
@@ -210,17 +193,10 @@ events.on<{ id: string }>("card:delete", (data) => {
 
 // [Представление] Нажатие кнопки открытия корзины
 events.on("basket:open", () => {
-  // Запрашиваем ререндер корзины из модели перед открытием
-  basketModel.clear() === undefined &&
-    basketModel.add(null as any) === undefined;
-  // Вместо пустых вызовов выше мы просто синхронизируем данные модели корзины с представлением
-  // Вызываем скрытый метод notify модели, чтобы принудительно обновить разметку перед показом
-  // Но так как notify защищен, мы просто передаем актуальное состояние через render
   const basketItems = basketModel.getItems().map((item, index) => {
-    const rowContainer = cardBasketTemplate.content.cloneNode(
-      true,
-    ) as HTMLElement;
-    const row = new CardBasket(rowContainer, {
+    const rowClone = cardBasketTemplate.content.cloneNode(true) as HTMLElement;
+    const rowElement = rowClone.firstElementChild as HTMLElement;
+    const row = new CardBasket(rowElement, {
       onDelete: () => events.emit("card:delete", { id: item.id }),
     });
     return row.render({
@@ -233,10 +209,10 @@ events.on("basket:open", () => {
   basketView.total = basketModel.getTotalPrice();
 
   modal.content = basketView.render();
-  modal.open(); // Ререндер в результате открытия модального окна
+  modal.open();
 });
 
-// [Представление] Нажатие кнопки оформления заказа (Переход к первой форме)
+// [Представление] Нажатие кнопки оформления заказа
 events.on("order:open", () => {
   modal.content = orderFormView.render({
     valid: false,
@@ -252,7 +228,7 @@ events.on("order:submit", () => {
   });
 });
 
-// [Представление] Нажатие кнопки оплаты/завершения оформления заказа -> Отправка на сервер
+// [Представление] Нажатие кнопки оплаты/завершения оформления заказа
 events.on("contacts:submit", () => {
   const orderData: IOrder = {
     ...buyerModel.getData(),
@@ -263,14 +239,16 @@ events.on("contacts:submit", () => {
   larekApi
     .orderProducts(orderData)
     .then((result) => {
-      const successContainer = successTemplate.content.cloneNode(
+      const successClone = successTemplate.content.cloneNode(
         true,
       ) as HTMLElement;
-      const successView = new Success(successContainer, {
+      const successElement = successClone.firstElementChild as HTMLElement; // Извлекаем элемент окна успеха
+
+      const successView = new Success(successElement, {
         onClose: () => {
           modal.close();
-          basketModel.clear(); // Изменение данных модели корзины
-          buyerModel.clearData(); // Изменение данных модели покупателя
+          basketModel.clear();
+          buyerModel.clearData();
         },
       });
       modal.content = successView.render({ total: result.total });
@@ -278,15 +256,13 @@ events.on("contacts:submit", () => {
     .catch((err) => console.error("Ошибка отправки заказа:", err));
 });
 
-// [Представление] Изменение данных в формах (События инпутов формы Доставки)
+// [Представление] Изменение данных в формах
 events.on<{ value: string }>("order.address:change", (data) =>
   buyerModel.setData("address", data.value),
 );
 events.on<{ payment: "card" | "cash" }>("order.payment:change", (data) =>
   buyerModel.setData("payment", data.payment),
 );
-
-// [Представление] Изменение данных в формах (События инпутов формы Контактов)
 events.on<{ value: string }>("contacts.email:change", (data) =>
   buyerModel.setData("email", data.value),
 );
@@ -294,7 +270,7 @@ events.on<{ value: string }>("contacts.phone:change", (data) =>
   buyerModel.setData("phone", data.value),
 );
 
-// Системные события открытия/закрытия модалок для управления скроллом страницы
+// Системные события открытия/закрытия модалок
 events.on("modal:open", () => {
   page.locked = true;
 });
@@ -308,7 +284,7 @@ events.on("modal:close", () => {
 larekApi
   .getProducts()
   .then((response) => {
-    // Сохранение этих товаров в модели данных (запустит событие items:changed)
+    // Сохранение товаров в модели данных
     catalogModel.setItems(response.items);
   })
   .catch((err) => console.error("Ошибка загрузки данных с сервера:", err));

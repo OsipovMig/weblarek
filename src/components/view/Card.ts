@@ -2,7 +2,6 @@ import { Component } from "../base/Component";
 import { categoryMap } from "../../utils/constants";
 import { IProduct } from "../../types";
 
-// Расширяем интерфейс для нужд отображения (порядковый номер, текст кнопки)
 export interface ICardView extends IProduct {
   index?: number;
   buttonText?: string;
@@ -14,13 +13,16 @@ export class Card extends Component<ICardView> {
   protected _price: HTMLElement;
 
   constructor(container: HTMLElement) {
-    super(container);
+    super(container); // Напрямую передаем чистый элемент в базовый Component
+
     this._title = container.querySelector(".card__title") as HTMLElement;
     this._price = container.querySelector(".card__price") as HTMLElement;
   }
 
   set id(value: string) {
-    this.container.dataset.id = value;
+    if (this.container) {
+      this.container.dataset.id = value;
+    }
   }
 
   set title(value: string) {
@@ -38,7 +40,7 @@ export class Card extends Component<ICardView> {
   }
 }
 
-// Карточка в галерее (Шаблон #card-catalog)
+// Класс CardCatalog
 export class CardCatalog extends Card {
   protected _category: HTMLElement;
   protected _image: HTMLImageElement;
@@ -49,16 +51,14 @@ export class CardCatalog extends Card {
     this._image = container.querySelector(".card__image") as HTMLImageElement;
 
     if (actions?.onClick) {
-      this.container.addEventListener("click", actions.onClick);
+      container.addEventListener("click", actions.onClick);
     }
   }
 
   set category(value: string) {
     if (this._category) {
       this._category.textContent = value;
-      this._category.className = "card__category"; // сброс старых классов
-
-      // Защита по ТЗ: использование объекта categoryMap из src/utils/constants.ts
+      this._category.className = "card__category";
       const categoryClass =
         categoryMap[value as keyof typeof categoryMap] ||
         "card__category_other";
@@ -67,16 +67,18 @@ export class CardCatalog extends Card {
   }
 
   set image(value: string) {
-    // Используем базовый метод setImage вашего родительского класса Component
     this.setImage(
       this._image,
       value,
-      this.container.querySelector(".card__title")?.textContent || "",
+      this.container?.querySelector(".card__title")?.textContent || "",
     );
   }
 }
 
-// Карточка превью в модальном окне (Шаблон #card-preview)
+// Классы CardPreview и CardBasket оставьте без изменений
+// === ВСТАВЬТЕ ЭТОТ КОД В САМЫЙ КОНЕЦ ФАЙЛА src/components/view/Card.ts ===
+
+// 3. Дочерний класс: Превью карточки в модальном окне (Экспортируем!)
 export class CardPreview extends CardCatalog {
   protected _text: HTMLElement;
   protected _button: HTMLButtonElement;
@@ -114,7 +116,7 @@ export class CardPreview extends CardCatalog {
   }
 }
 
-// Карточка товара в списке корзины (Шаблон #card-basket)
+// 4. Дочерний класс: Строка товара в списке корзины (Экспортируем!)
 export class CardBasket extends Card {
   protected _index: HTMLElement;
   protected _buttonDelete: HTMLButtonElement;
