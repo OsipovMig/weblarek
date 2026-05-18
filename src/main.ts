@@ -62,24 +62,25 @@ const successTemplate = document.querySelector(
 ) as HTMLTemplateElement;
 
 // Инициализация компонентов представления для модальных окон
-// Используем .firstElementChild, чтобы достать чистый HTML-элемент формы/корзины из шаблона
+// Безопасно извлекаем первый дочерний элемент из шаблонов форм и корзины через .firstElementChild
 const basketView = new Basket(
   (basketTemplate.content.cloneNode(true) as HTMLElement)
     .firstElementChild as HTMLElement,
   events,
 );
-
 const orderFormView = new OrderForm(
   (orderTemplate.content.cloneNode(true) as HTMLElement)
     .firstElementChild as HTMLFormElement,
   events,
 );
-
 const contactsFormView = new ContactsForm(
   (contactsTemplate.content.cloneNode(true) as HTMLElement)
     .firstElementChild as HTMLFormElement,
   events,
 );
+
+// Ссылка для хранения текущего открытого превью карточки на уровне модуля Презентера
+let currentCardPreview: CardPreview | null = null;
 
 // ==========================================
 // 3. ОБРАБОТКА СОБЫТИЙ ПРЕЗЕНТЕРОМ
@@ -114,14 +115,15 @@ events.on<{ item: IProduct | null }>("preview:changed", (data) => {
     ) as HTMLElement;
     const previewElement = previewClone.firstElementChild as HTMLElement; // Извлекаем HTML-элемент карточки превью
 
-    const cardPreview = new CardPreview(previewElement, {
+    // Сохраняем инстанс в переменную, чтобы иметь к нему прямой доступ в других событиях
+    currentCardPreview = new CardPreview(previewElement, {
       onClick: () => {
         events.emit("card:toBasket", { id: data.item!.id });
       },
     });
 
     const isAdded = basketModel.isInBasket(data.item.id);
-    modal.content = cardPreview.render({
+    modal.content = currentCardPreview.render({
       ...data.item,
       buttonText: isAdded ? "Удалить из корзины" : "В корзину",
     });
@@ -185,10 +187,14 @@ events.on<{ id: string }>("card:toBasket", (data) => {
     } else {
       basketModel.add(item);
     }
+
+    // ИСПРАВЛЕНО: Вместо modal.content.querySelector... используем чистый сеттер компонента
     const isAdded = basketModel.isInBasket(item.id);
-    const cardBtn = modal.content.querySelector(".card__button");
-    if (cardBtn)
-      cardBtn.textContent = isAdded ? "Удалить из корзины" : "В корзину";
+    if (currentCardPreview) {
+      currentCardPreview.buttonText = isAdded
+        ? "Удалить из корзины"
+        : "В корзину";
+    }
   }
 });
 
