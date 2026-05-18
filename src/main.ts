@@ -6,15 +6,17 @@ import { BasketModel } from "./components/Models/BasketModel";
 import { BuyerModel } from "./components/Models/BuyerModel";
 import { Api } from "./components/base/Api";
 import { LarekApi } from "./components/LarekApi";
+import { EventEmitter } from "./components/base/Events"; // Исправлено: убрали .ts в конце
 
+const events = new EventEmitter();
 // Инициализация моделей
-const catalog = new CatalogModel();
-const basket = new BasketModel();
-const buyer = new BuyerModel();
+const catalog = new CatalogModel(events);
+const basket = new BasketModel(events);
+const buyer = new BuyerModel(events);
 
-// Инициализация API
+// Инициализация API (Исправлено: передан CDN_URL первым аргументом)
 const baseApi = new Api(API_URL);
-const larekApi = new LarekApi(baseApi);
+const larekApi = new LarekApi(CDN_URL, baseApi);
 
 console.log("РЕАЛЬНЫЙ АДРЕС API:", API_URL);
 
@@ -75,29 +77,30 @@ buyer.setData("email", "test@test.ru");
 buyer.setData("phone", "+79990000000");
 buyer.setData("payment", "card");
 console.log("Данные заполнены:", buyer.getData());
-console.log("Ошибки валидации (ожидаем пусто):", buyer.validate());
+// Исправлено: заменено validate() на validateAll()
+console.log("Ошибки валидации (ожидаем пусто):", buyer.validateAll());
 
 // 2. Тест метода clearData()
 buyer.clearData();
 console.log("Данные после очистки (clearData):", buyer.getData());
 
 // Проверяем, что после очистки валидация снова находит ошибки
-const errorsAfterClear = buyer.validate();
+// Исправлено: заменено validate() на validateAll()
+const errorsAfterClear = buyer.validateAll();
 console.log("Ошибки после очистки (должны появиться снова):", errorsAfterClear);
 
+console.groupEnd();
+
+// Закрываем общую группу тестирования локальных моделей
 console.groupEnd();
 
 // --- 2. РАБОТА С СЕРВЕРОМ ---
 larekApi
   .getProducts()
   .then((res) => {
-    // Модифицируем данные: добавляем CDN_URL к картинкам (теперь это делается здесь)
-    const itemsWithImages = res.items.map((item) => ({
-      ...item,
-      image: CDN_URL + item.image,
-    }));
-
-    catalog.setItems(itemsWithImages);
+    // Наш класс LarekApi внутри своего метода getProducts() уже сам добавляет CDN_URL к картинкам,
+    // поэтому здесь мы просто передаем готовый массив из ответа сервера напрямую в модель
+    catalog.setItems(res.items);
 
     console.group("Проверка данных с сервера");
     const products = catalog.getItems();
