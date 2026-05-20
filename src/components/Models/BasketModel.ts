@@ -1,23 +1,10 @@
-import { IProduct, IBasketModel } from "../../types";
-import { IEvents } from "../base/Events"; // Добавили обязательный импорт брокера событий
+import { IProduct } from "../../types";
+import { IEvents } from "../base/Events";
 
-export class BasketModel implements IBasketModel {
+export class BasketModel {
   protected _items: IProduct[] = [];
-  protected events: IEvents; // Добавили поле для хранения брокера событий
 
-  // Конструктор теперь принимает events (решает ошибку в main.ts)
-  constructor(events: IEvents) {
-    this.events = events;
-  }
-
-  // Реализация геттеров для соответствия интерфейсу IBasketModel
-  get items(): IProduct[] {
-    return this._items;
-  }
-
-  get total(): number {
-    return this.getTotalPrice();
-  }
+  constructor(protected events: IEvents) {}
 
   getItems(): IProduct[] {
     return this._items;
@@ -26,18 +13,18 @@ export class BasketModel implements IBasketModel {
   add(item: IProduct): void {
     if (!this.isInBasket(item.id)) {
       this._items.push(item);
-      this.notify(); // Генерируем событие при изменении данных
+      this.notify();
     }
   }
 
   remove(id: string): void {
     this._items = this._items.filter((item) => item.id !== id);
-    this.notify(); // Генерируем событие при изменении данных
+    this.notify();
   }
 
   clear(): void {
     this._items = [];
-    this.notify(); // Генерируем событие при изменении данных
+    this.notify();
   }
 
   getTotalPrice(): number {
@@ -52,12 +39,8 @@ export class BasketModel implements IBasketModel {
     return this._items.some((item) => item.id === id);
   }
 
-  // Централизованный метод уведомления Презентера об изменении корзины
   protected notify(): void {
-    this.events.emit("basket:changed", {
-      items: this._items,
-      total: this.getTotalPrice(),
-      count: this.getCount(),
-    } as object); // Добавили приведение типов, чтобы не было ошибок IEvents
+    // Передаем пустой объект для удовлетворения контракта <T extends object>
+    this.events.emit("basket:changed", {});
   }
 }

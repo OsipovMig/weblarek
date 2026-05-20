@@ -1,4 +1,5 @@
 import { Component } from "../base/Component";
+import { ensureElement } from "../../utils/utils";
 
 interface ISuccess {
   total: number;
@@ -10,12 +11,14 @@ export class Success extends Component<ISuccess> {
 
   constructor(container: HTMLElement, actions?: { onClose: () => void }) {
     super(container);
-    this._close = container.querySelector(
+    this._close = ensureElement<HTMLButtonElement>(
       ".order-success__close",
-    ) as HTMLButtonElement;
-    this._description = container.querySelector(
+      container,
+    );
+    this._description = ensureElement<HTMLElement>(
       ".order-success__description",
-    ) as HTMLElement;
+      container,
+    );
 
     if (this._close && actions?.onClose) {
       this._close.addEventListener("click", actions.onClose);

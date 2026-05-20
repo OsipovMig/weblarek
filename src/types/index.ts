@@ -32,8 +32,8 @@ export interface IBuyer {
 
 // Интерфейс состояния приложения (для CatalogModel)
 export interface ICatalogModel {
-  items: IProduct[];
-  preview: IProduct | null;
+  //  items: IProduct[];
+  // preview: IProduct | null;
 }
 
 // Интерфейс для корзины (для BasketModel)

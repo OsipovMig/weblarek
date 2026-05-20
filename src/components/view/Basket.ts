@@ -1,5 +1,6 @@
 import { Component } from "../base/Component";
 import { IEvents } from "../base/Events";
+import { ensureElement } from "../../utils/utils";
 
 interface IBasket {
   items: HTMLElement[];
@@ -16,11 +17,12 @@ export class Basket extends Component<IBasket> {
     protected events: IEvents,
   ) {
     super(container);
-    this._list = container.querySelector(".basket__list") as HTMLElement;
-    this._total = container.querySelector(".basket__price") as HTMLElement;
-    this._button = container.querySelector(
+    this._list = ensureElement<HTMLElement>(".basket__list", container);
+    this._total = ensureElement<HTMLElement>(".basket__price", container);
+    this._button = ensureElement<HTMLButtonElement>(
       ".basket__button",
-    ) as HTMLButtonElement;
+      container,
+    );
 
     this._button.addEventListener("click", () => {
       this.events.emit("order:open");
@@ -29,17 +31,17 @@ export class Basket extends Component<IBasket> {
 
   set items(items: HTMLElement[]) {
     if (this._list) {
-      if (items.length > 0) {
-        this._list.replaceChildren(...items);
-        this._button.removeAttribute("disabled");
-      } else {
-        this._list.replaceChildren(document.createTextNode("Корзина пуста"));
-        this._button.setAttribute("disabled", "disabled");
-      }
+      this._list.replaceChildren(...items);
     }
   }
 
   set total(value: number) {
     if (this._total) this._total.textContent = `${value} синапсов`;
+  }
+
+  set disabled(state: boolean) {
+    if (this._button) {
+      this._button.disabled = state;
+    }
   }
 }

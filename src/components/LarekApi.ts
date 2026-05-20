@@ -1,27 +1,17 @@
 import { Api } from "./base/Api";
-import { IProductResponse, IOrder, IOrderResult, IProduct } from "../types";
+import { IProductResponse, IOrder, IOrderResult } from "../types";
 
 export class LarekApi {
   private _api: Api;
-  readonly cdnUrl: string;
 
-  // Конструктор принимает сначала строку CDN, затем объект Api
-  constructor(cdnUrl: string, api: Api) {
+  // ИСПРАВЛЕНО: Конструктор теперь принимает только базовый класс Api, без CDN
+  constructor(api: Api) {
     this._api = api;
-    this.cdnUrl = cdnUrl;
   }
 
+  // ИСПРАВЛЕНО: Метод просто возвращает полный сырой объект ответа сервера без изменений
   getProducts(): Promise<IProductResponse> {
-    // Убрали знак вопроса, чтобы метод гарантированно возвращал Promise, который ждет main.ts
-    return this._api.get<IProductResponse>("/product").then((response) => {
-      return {
-        ...response,
-        items: response.items.map((item: IProduct) => ({
-          ...item,
-          image: this.cdnUrl + item.image,
-        })),
-      };
-    });
+    return this._api.get<IProductResponse>("/product");
   }
 
   orderProducts(order: IOrder): Promise<IOrderResult> {

@@ -1,27 +1,16 @@
-import { IProduct, ICatalogModel } from "../../types";
+import { IProduct } from "../../types";
 import { IEvents } from "../base/Events";
 
-export class CatalogModel implements ICatalogModel {
+export class CatalogModel {
   protected _items: IProduct[] = [];
   protected _preview: IProduct | null = null;
 
-  // ИСПРАВЛЕНО: Убрали внешнее объявление поля.
-  // Модификатор protected прямо здесь гарантирует создание и железную запись свойства this.events
   constructor(protected events: IEvents) {}
-
-  get items(): IProduct[] {
-    return this._items;
-  }
-
-  get preview(): IProduct | null {
-    return this._preview;
-  }
 
   setItems(items: IProduct[]): void {
     this._items = items;
-
-    // Добавили защитную проверку ?., чтобы рантайм не падал в любом случае
-    this.events?.emit("items:changed", { items: this._items } as object);
+    // Передаем пустой объект, удовлетворяющий <T extends object>, без приведения типов
+    this.events.emit("items:changed", {});
   }
 
   getItems(): IProduct[] {
@@ -34,7 +23,9 @@ export class CatalogModel implements ICatalogModel {
 
   setPreview(item: IProduct | null = null): void {
     this._preview = item;
-    this.events?.emit("preview:changed", { item: this._preview });
+    // Чтобы не передавать null в события (так как null не extends object),
+    // принудительно шлем пустой объект, если товара нет, или сам товар, если он выбран
+    this.events.emit("preview:changed", item || {});
   }
 
   getPreview(): IProduct | null {
